@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import org.elasticsearch.common.geo.GeoShapeConstants;
+import org.elasticsearch.common.geo.builders.ShapeBuilder;
 
 import com.spatial4j.core.distance.DistanceUtils;
 import com.vividsolutions.jts.geom.Coordinate;
@@ -200,7 +200,7 @@ public class ESShape {
 						locations.get(i).getLongitude(),
 						locations.get(i).getLatitude());
 			}
-			GeometryFactory factory = GeoShapeConstants.SPATIAL_CONTEXT.getGeometryFactory();
+			GeometryFactory factory = ShapeBuilder.SPATIAL_CONTEXT.getGeometryFactory();
 			CoordinateSequence sequence = factory.getCoordinateSequenceFactory().create(coordinates);
 			switch (getShapeType()) {
 			case POINT:

@@ -280,8 +280,8 @@ public class EntityDao {
 	public <T extends ESEntity> boolean delete(Class<T> entityClass, long osmId) {
 		try {
 			String indiceName = ESEntityType.valueOf(entityClass).getIndiceName();
-			return !client.prepareDelete(indexName, indiceName, Long.toString(osmId))
-					.execute().actionGet().isNotFound();
+			return client.prepareDelete(indexName, indiceName, Long.toString(osmId))
+					.execute().actionGet().isFound();
 		} catch (Exception e) {
 			String indiceName = ESEntityType.valueOf(entityClass).getIndiceName();
 			String message = String.format("Unable to delete entity %s in %s/%s",
