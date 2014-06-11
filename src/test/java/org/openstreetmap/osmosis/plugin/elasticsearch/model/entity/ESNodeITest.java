@@ -6,8 +6,10 @@ import junit.framework.Assert;
 
 import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.action.search.SearchResponse;
-import org.elasticsearch.common.geo.GeoShapeConstants;
+import org.elasticsearch.common.geo.ShapeRelation;
+import org.elasticsearch.common.geo.builders.ShapeBuilder;
 import org.elasticsearch.common.unit.DistanceUnit;
+import org.elasticsearch.index.query.FilterBuilders;
 import org.elasticsearch.index.query.GeoDistanceFilterBuilder;
 import org.elasticsearch.index.query.GeoShapeFilterBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
@@ -19,7 +21,7 @@ import org.openstreetmap.osmosis.plugin.elasticsearch.testutils.AbstractElasticS
 
 import com.spatial4j.core.distance.DistanceUtils;
 import com.spatial4j.core.shape.Point;
-import com.spatial4j.core.shape.Shape;
+import com.spatial4j.core.shape.Rectangle;
 import com.spatial4j.core.shape.impl.PointImpl;
 
 public class ESNodeITest extends AbstractElasticSearchInMemoryTest {
@@ -62,12 +64,14 @@ public class ESNodeITest extends AbstractElasticSearchInMemoryTest {
 				.addTag("highway", "traffic_signals").build();
 		index(INDEX_NAME, node);
 		refresh();
-
-		// Action
-		Shape shape = buildSquareShape(48.675652, 2.384955, 20);
+		
+		GeoShapeFilterBuilder geoBuilder=FilterBuilders.geoShapeFilter("shape",
+				buildSquareShape(48.675652, 2.384955, 20),
+				ShapeRelation.INTERSECTS);
+		
 		SearchResponse searchResponse = client().prepareSearch(INDEX_NAME).setTypes(ESEntityType.NODE.getIndiceName())
 				.setQuery(QueryBuilders.matchAllQuery())
-				.setFilter(new GeoShapeFilterBuilder("shape", shape))
+				.setPostFilter(geoBuilder)
 				.execute().actionGet();
 
 		// Assert
@@ -83,10 +87,13 @@ public class ESNodeITest extends AbstractElasticSearchInMemoryTest {
 		refresh();
 
 		// Action
-		Shape shape = buildSquareShape(48.676455, 2.380899, 20);
+		GeoShapeFilterBuilder geoBuilder=FilterBuilders.geoShapeFilter("shape",
+				buildSquareShape(48.676455, 2.380899, 20),
+				ShapeRelation.INTERSECTS);
+		
 		SearchResponse searchResponse = client().prepareSearch(INDEX_NAME).setTypes(ESEntityType.NODE.getIndiceName())
 				.setQuery(QueryBuilders.matchAllQuery())
-				.setFilter(new GeoShapeFilterBuilder("shape", shape))
+				.setPostFilter(geoBuilder)
 				.execute().actionGet();
 
 		// Assert
@@ -102,10 +109,13 @@ public class ESNodeITest extends AbstractElasticSearchInMemoryTest {
 		refresh();
 
 		// Action
-		Shape shape = buildSquareShape(48.675652, 2.384955, 10000);
+		GeoShapeFilterBuilder geoBuilder=FilterBuilders.geoShapeFilter("shape",
+				buildSquareShape(48.675652, 2.384955, 10000),
+				ShapeRelation.INTERSECTS);
+		
 		SearchResponse searchResponse = client().prepareSearch(INDEX_NAME).setTypes(ESEntityType.NODE.getIndiceName())
 				.setQuery(QueryBuilders.matchAllQuery())
-				.setFilter(new GeoShapeFilterBuilder("shape", shape))
+				.setPostFilter(geoBuilder)
 				.execute().actionGet();
 
 		// Assert
@@ -122,10 +132,13 @@ public class ESNodeITest extends AbstractElasticSearchInMemoryTest {
 
 		// Action
 		// Can't do better than 20m with default shape configuration
-		Shape shape = buildSquareShape(48.675652, 2.384955, 20);
+		GeoShapeFilterBuilder geoBuilder=FilterBuilders.geoShapeFilter("shape",
+				buildSquareShape(48.675652, 2.384955, 20),
+				ShapeRelation.INTERSECTS);
+		
 		SearchResponse searchResponse = client().prepareSearch(INDEX_NAME).setTypes(ESEntityType.NODE.getIndiceName())
 				.setQuery(QueryBuilders.matchAllQuery())
-				.setFilter(new GeoShapeFilterBuilder("shape", shape))
+				.setPostFilter(geoBuilder)
 				.execute().actionGet();
 
 		// Assert
@@ -143,7 +156,7 @@ public class ESNodeITest extends AbstractElasticSearchInMemoryTest {
 		// Action
 		SearchResponse searchResponse = client().prepareSearch(INDEX_NAME).setTypes(ESEntityType.NODE.getIndiceName())
 				.setQuery(QueryBuilders.matchAllQuery())
-				.setFilter(new GeoDistanceFilterBuilder("centroid").point(48.675652, 2.384955).distance(20, DistanceUnit.METERS))
+				.setPostFilter(new GeoDistanceFilterBuilder("centroid").point(48.675652, 2.384955).distance(20, DistanceUnit.METERS))
 				.execute().actionGet();
 
 		// Assert
@@ -161,7 +174,7 @@ public class ESNodeITest extends AbstractElasticSearchInMemoryTest {
 		// Action
 		SearchResponse searchResponse = client().prepareSearch(INDEX_NAME).setTypes(ESEntityType.NODE.getIndiceName())
 				.setQuery(QueryBuilders.matchAllQuery())
-				.setFilter(new GeoDistanceFilterBuilder("centroid").point(48.676455, 2.380899).distance(20, DistanceUnit.METERS))
+				.setPostFilter(new GeoDistanceFilterBuilder("centroid").point(48.676455, 2.380899).distance(20, DistanceUnit.METERS))
 				.execute().actionGet();
 
 		// Assert
@@ -181,7 +194,7 @@ public class ESNodeITest extends AbstractElasticSearchInMemoryTest {
 		// Action
 		SearchResponse searchResponse = client().prepareSearch(INDEX_NAME).setTypes(ESEntityType.NODE.getIndiceName())
 				.setQuery(QueryBuilders.matchAllQuery())
-				.setFilter(new GeoDistanceFilterBuilder("centroid").point(48.676455, 2.380899).distance(1, DistanceUnit.KILOMETERS))
+				.setPostFilter(new GeoDistanceFilterBuilder("centroid").point(48.676455, 2.380899).distance(1, DistanceUnit.KILOMETERS))
 				.addSort(new GeoDistanceSortBuilder("centroid").point(48.676455, 2.380899).unit(DistanceUnit.METERS))
 				.execute().actionGet();
 
@@ -191,10 +204,16 @@ public class ESNodeITest extends AbstractElasticSearchInMemoryTest {
 		Assert.assertEquals("1854801716", searchResponse.getHits().getAt(1).getId());
 	}
 
-	protected Shape buildSquareShape(double centerLat, double centerLon, double distanceMeter) {
-		Point point = new PointImpl(centerLon, centerLat, GeoShapeConstants.SPATIAL_CONTEXT);
+	protected ShapeBuilder buildSquareShape(double centerLat, double centerLon, double distanceMeter) {
+		Point point = new PointImpl(centerLon, centerLat, ShapeBuilder.SPATIAL_CONTEXT);
 		double radius = DistanceUtils.dist2Degrees(distanceMeter / 10E3, DistanceUtils.EARTH_MEAN_RADIUS_KM);
-		return GeoShapeConstants.SPATIAL_CONTEXT.makeCircle(point, radius).getBoundingBox();
+		Rectangle rec=ShapeBuilder.SPATIAL_CONTEXT.makeCircle(point, radius).getBoundingBox();
+		
+		return ShapeBuilder.newPolygon()
+				.point(rec.getMinX(), rec.getMinY())
+				.point(rec.getMinX(), rec.getMaxY())
+				.point(rec.getMaxX(), rec.getMinY())
+				.point(rec.getMaxX(), rec.getMaxY());		
 	}
 
 }

@@ -20,7 +20,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import org.elasticsearch.ElasticSearchException;
+import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.ListenableActionFuture;
 import org.elasticsearch.action.bulk.BulkItemResponse;
 import org.elasticsearch.action.bulk.BulkRequestBuilder;
@@ -513,7 +513,7 @@ public class EntityDaoUTest {
 		when(deleteRequestBuilder.execute()).thenReturn(listenableActionFutureMocked);
 		DeleteResponse deleteResponseMocked = mock(DeleteResponse.class);
 		when(listenableActionFutureMocked.actionGet()).thenReturn(deleteResponseMocked);
-		when(deleteResponseMocked.isNotFound()).thenReturn(false);
+		when(!deleteResponseMocked.isFound()).thenReturn(false);
 
 		// Action
 		boolean actual = entityDao.delete(ESNode.class, 1l);
@@ -532,7 +532,7 @@ public class EntityDaoUTest {
 		when(deleteRequestBuilder.execute()).thenReturn(listenableActionFutureMocked);
 		DeleteResponse deleteResponseMocked = mock(DeleteResponse.class);
 		when(listenableActionFutureMocked.actionGet()).thenReturn(deleteResponseMocked);
-		when(deleteResponseMocked.isNotFound()).thenReturn(true);
+		when(!deleteResponseMocked.isFound()).thenReturn(true);
 
 		// Action
 		boolean actual = entityDao.delete(ESNode.class, 1l);
@@ -548,7 +548,7 @@ public class EntityDaoUTest {
 		when(clientMocked.prepareDelete(any(String.class), any(String.class), any(String.class))).thenReturn(deleteRequestBuilder);
 		ListenableActionFuture<DeleteResponse> listenableActionFutureMocked = mock(ListenableActionFuture.class);
 		when(deleteRequestBuilder.execute()).thenReturn(listenableActionFutureMocked);
-		when(listenableActionFutureMocked.actionGet()).thenThrow(new ElasticSearchException("Simulated exception"));
+		when(listenableActionFutureMocked.actionGet()).thenThrow(new ElasticsearchException("Simulated exception"));
 
 		// Action
 		entityDao.delete(ESNode.class, 1l);

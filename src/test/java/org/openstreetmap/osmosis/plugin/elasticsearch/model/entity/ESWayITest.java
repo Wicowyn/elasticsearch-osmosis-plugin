@@ -6,7 +6,9 @@ import junit.framework.Assert;
 
 import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.action.search.SearchResponse;
-import org.elasticsearch.common.geo.GeoShapeConstants;
+import org.elasticsearch.common.geo.ShapeRelation;
+import org.elasticsearch.common.geo.builders.ShapeBuilder;
+import org.elasticsearch.index.query.FilterBuilders;
 import org.elasticsearch.index.query.GeoShapeFilterBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.junit.Before;
@@ -16,7 +18,7 @@ import org.openstreetmap.osmosis.plugin.elasticsearch.testutils.AbstractElasticS
 
 import com.spatial4j.core.distance.DistanceUtils;
 import com.spatial4j.core.shape.Point;
-import com.spatial4j.core.shape.Shape;
+import com.spatial4j.core.shape.Rectangle;
 import com.spatial4j.core.shape.impl.PointImpl;
 
 public class ESWayITest extends AbstractElasticSearchInMemoryTest {
@@ -88,10 +90,13 @@ public class ESWayITest extends AbstractElasticSearchInMemoryTest {
 		refresh();
 
 		// Action
-		Shape shape = buildSquareShape(48.675763, 2.379358, 20);
+		GeoShapeFilterBuilder geoBuilder=FilterBuilders.geoShapeFilter("shape",
+				buildSquareShape(48.675763, 2.379358, 20),
+				ShapeRelation.INTERSECTS);
+		
 		SearchResponse searchResponse = client().prepareSearch(INDEX_NAME).setTypes(ESEntityType.WAY.getIndiceName())
 				.setQuery(QueryBuilders.matchAllQuery())
-				.setFilter(new GeoShapeFilterBuilder("shape", shape))
+				.setPostFilter(geoBuilder)
 				.execute().actionGet();
 
 		// Assert
@@ -108,10 +113,13 @@ public class ESWayITest extends AbstractElasticSearchInMemoryTest {
 		refresh();
 
 		// Action
-		Shape shape = buildSquareShape(48.676455, 2.380899, 20);
+		GeoShapeFilterBuilder geoBuilder=FilterBuilders.geoShapeFilter("shape",
+				buildSquareShape(48.676455, 2.380899, 20),
+				ShapeRelation.INTERSECTS);
+		
 		SearchResponse searchResponse = client().prepareSearch(INDEX_NAME).setTypes(ESEntityType.WAY.getIndiceName())
 				.setQuery(QueryBuilders.matchAllQuery())
-				.setFilter(new GeoShapeFilterBuilder("shape", shape))
+				.setPostFilter(geoBuilder)
 				.execute().actionGet();
 
 		// Assert
@@ -128,10 +136,13 @@ public class ESWayITest extends AbstractElasticSearchInMemoryTest {
 		refresh();
 
 		// Action
-		Shape shape = buildSquareShape(48.675763, 2.379358, 10000);
+		GeoShapeFilterBuilder geoBuilder=FilterBuilders.geoShapeFilter("shape",
+				buildSquareShape(48.675763, 2.379358, 10000),
+				ShapeRelation.INTERSECTS);
+		
 		SearchResponse searchResponse = client().prepareSearch(INDEX_NAME).setTypes(ESEntityType.WAY.getIndiceName())
 				.setQuery(QueryBuilders.matchAllQuery())
-				.setFilter(new GeoShapeFilterBuilder("shape", shape))
+				.setPostFilter(geoBuilder)
 				.execute().actionGet();
 
 		// Assert
@@ -154,10 +165,13 @@ public class ESWayITest extends AbstractElasticSearchInMemoryTest {
 		// Action
 		// ~ 45 meters min shape radius to match
 		// center between positions index #5 and #6
-		Shape shape = buildSquareShape(48.675689, 2.38259, 45);
+		GeoShapeFilterBuilder geoBuilder=FilterBuilders.geoShapeFilter("shape",
+				buildSquareShape(48.675689, 2.38259, 45),
+				ShapeRelation.INTERSECTS);
+		
 		SearchResponse searchResponse = client().prepareSearch(INDEX_NAME).setTypes(ESEntityType.WAY.getIndiceName())
 				.setQuery(QueryBuilders.matchAllQuery())
-				.setFilter(new GeoShapeFilterBuilder("shape", shape))
+				.setPostFilter(geoBuilder)
 				.execute().actionGet();
 
 		// Assert
@@ -175,10 +189,13 @@ public class ESWayITest extends AbstractElasticSearchInMemoryTest {
 		refresh();
 
 		// Action
-		Shape shape = buildSquareShape(48.675763, 2.379358, 100);
+		GeoShapeFilterBuilder geoBuilder=FilterBuilders.geoShapeFilter("shape",
+				buildSquareShape(48.675763, 2.379358, 100),
+				ShapeRelation.INTERSECTS);
+		
 		SearchResponse searchResponse = client().prepareSearch(INDEX_NAME).setTypes(ESEntityType.WAY.getIndiceName())
 				.setQuery(QueryBuilders.matchAllQuery())
-				.setFilter(new GeoShapeFilterBuilder("shape", shape))
+				.setPostFilter(geoBuilder)
 				.execute().actionGet();
 
 		// Assert
@@ -196,20 +213,29 @@ public class ESWayITest extends AbstractElasticSearchInMemoryTest {
 		refresh();
 
 		// Action
-		Shape shape = buildSquareShape(48.676455, 2.380899, 20);
+		GeoShapeFilterBuilder geoBuilder=FilterBuilders.geoShapeFilter("shape",
+				buildSquareShape(48.676455, 2.380899, 20),
+				ShapeRelation.INTERSECTS);
+		
 		SearchResponse searchResponse = client().prepareSearch(INDEX_NAME).setTypes(ESEntityType.WAY.getIndiceName())
 				.setQuery(QueryBuilders.matchAllQuery())
-				.setFilter(new GeoShapeFilterBuilder("shape", shape))
+				.setPostFilter(geoBuilder)
 				.execute().actionGet();
 
 		// Assert
 		Assert.assertEquals(0, searchResponse.getHits().hits().length);
 	}
-
-	protected Shape buildSquareShape(double centerLat, double centerLon, double distanceMeter) {
-		Point point = new PointImpl(centerLon, centerLat, GeoShapeConstants.SPATIAL_CONTEXT);
+	
+	protected ShapeBuilder buildSquareShape(double centerLat, double centerLon, double distanceMeter) {
+		Point point = new PointImpl(centerLon, centerLat, ShapeBuilder.SPATIAL_CONTEXT);
 		double radius = DistanceUtils.dist2Degrees(distanceMeter / 10E3, DistanceUtils.EARTH_MEAN_RADIUS_KM);
-		return GeoShapeConstants.SPATIAL_CONTEXT.makeCircle(point, radius).getBoundingBox();
+		Rectangle rec=ShapeBuilder.SPATIAL_CONTEXT.makeCircle(point, radius).getBoundingBox();
+		
+		return ShapeBuilder.newPolygon()
+				.point(rec.getMinX(), rec.getMinY())
+				.point(rec.getMinX(), rec.getMaxY())
+				.point(rec.getMaxX(), rec.getMinY())
+				.point(rec.getMaxX(), rec.getMaxY());		
 	}
 
 }
